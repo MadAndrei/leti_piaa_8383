@@ -108,7 +108,8 @@ int minWeightOnCurrentPath(Graph* graph, std::map<char, char>& parents, char fin
     return weight;
 }
 
-void changeWeights(Graph* graph, std::map<char, char>& parents, char finish, int flow, std::map<std::pair<char,char>,int>& answer) {
+void changeWeights(Graph* graph, std::map<char, char>& parents, char finish,
+ int flow, std::map<std::pair<char,char>,int>& answer) {
     char prevVert = finish;
     char curVert = parents[prevVert];
     while (prevVert != curVert) {
@@ -166,4 +167,6 @@ int main() {
     fordFulkerson(graph, maxFlow, start, finish, answer);
 
     writeAnswer(edges, answer, maxFlow);
+
+    delete graph;
 }
