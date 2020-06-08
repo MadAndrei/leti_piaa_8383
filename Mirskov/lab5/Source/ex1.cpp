@@ -2,7 +2,6 @@
 #include <vector>
 #include <algorithm>
 #include <string>
-#include <set>
 
 class Vertex {
 public:
@@ -12,7 +11,7 @@ public:
         arr = par->arr;
     }
 
-    Vertex (std::set<std::pair<int,int>>* mainAnswer, std::vector<int>* mainArr):
+    Vertex (std::vector<std::pair<int,int>>* mainAnswer, std::vector<int>* mainArr):
     answer(mainAnswer), arr(mainArr) {
         start = this;
         link = this;
@@ -60,7 +59,7 @@ public:
     void check(int ind) {
         if (this == start) return;
         if (leaf) {
-            answer->insert(std::make_pair(ind - (*arr)[leafInd] + 2, leafInd+1));
+            answer->emplace_back(ind - (*arr)[leafInd] + 2, leafInd+1);
             std::cout << "found string with index " << leafInd << '\n';
         }
         fastLink()->check(ind);
@@ -72,6 +71,13 @@ public:
 
     void setInd(int ind) {
         leafInd = ind;
+    }
+
+    int countVert() {
+        int maxEdge = 0;
+        for (auto i: nextBor) maxEdge += (i!=nullptr);
+        for (auto i: nextBor) if (i) maxEdge = std::max(maxEdge, i->countVert());
+        return maxEdge;
     }
 
     char getSymbol() {
@@ -100,33 +106,9 @@ private:
     std::vector<Vertex*> nextAuto = std::vector<Vertex*>(26, nullptr);
     bool leaf = false;
     int leafInd;
-    std::set<std::pair<int,int>>* answer;
+    std::vector<std::pair<int,int>>* answer;
     std::vector<int>* arr;
 };
-
-std::vector<std::pair<std::string, int>> cutString(std::string& s, int k, int sampleLen) {
-    std::vector<std::pair<std::string, int>> cutStrings;
-    int strLen = s.length();
-    sampleLen--;
-    int oneStringLen = (strLen - sampleLen) / k + sampleLen;
-    if (sampleLen >= oneStringLen - 1) {
-        std::cout << "k is too big\nno cut\n";
-        cutStrings.push_back({s, 0});
-        return cutStrings;
-    }
-    int plusOneCount = (strLen - sampleLen) % k;
-    int ind = 0;
-    for (int i = 0; i < plusOneCount; i++) {
-        cutStrings.push_back(std::make_pair(s.substr(ind, oneStringLen + 1), ind));
-        ind += oneStringLen + 1 - sampleLen;
-    }
-    for (int i = 0; i < k - plusOneCount; i++) {
-        cutStrings.push_back(std::make_pair(s.substr(ind, oneStringLen), ind));
-        ind += oneStringLen - sampleLen;
-    }
-
-    return cutStrings;
-}
 
 void addString(Vertex* suffAuto, std::string& s, int ind) {
     std::cout << "add string: " << s << '\n';
@@ -142,57 +124,59 @@ void addString(Vertex* suffAuto, std::string& s, int ind) {
     vertex->setInd(ind);
 }
 
-int read(std::string& text, Vertex* suffAuto, std::vector<int>* arr, int& k) {
+void read(std::string& text, Vertex* suffAuto, std::vector<int>* arr) {
     std::cin >> text;
-    int maxSampleLen = 0;
 
     int n; std::cin >> n;
     for (int i = 0; i < n; i++) {
         std::string p; std::cin >> p;
-        maxSampleLen = std::max(maxSampleLen, (int)p.length());
         addString(suffAuto, p, i);
         arr->push_back(p.length());
     }
-
-    std::cin >> k;
-
-    return maxSampleLen;
 }
 
-void getAnswer(std::string& text, Vertex* suffAuto, std::set<std::pair<int,int>>* answer, int k, int maxSampleLen) {
+void getAnswer(std::string& text, Vertex* suffAuto, std::vector<std::pair<int,int>>* answer) {
+    int ind = 0;
     std::cout << "WORK:\n";
     Vertex* curVertex = suffAuto;
-    for (auto pair: cutString(text, k, maxSampleLen)) {
-        std::string textPart = pair.first;
-        int ind = pair.second;
-        std::cout << "work with " << textPart << '\n';
-        for (char c: textPart) {
-            std::cout << "current symbol: " << c << '\n'; 
-            curVertex = curVertex->go(c-'A');
-            curVertex->check(ind);
-            ind++;
-        }
+    for (char c: text) {
+        std::cout << "current symbol: " << c << '\n'; 
+        curVertex = curVertex->go(c-'A');
+        curVertex->check(ind);
+        ind++;
     }
+    std::sort(answer->begin(), answer->end());
 }
 
-void writeAnswer(Vertex* suffAuto, std::vector<int>* arr, std::set<std::pair<int,int>>* answer, std::string& text) {
+void writeAnswer(Vertex* suffAuto, std::vector<int>* arr, std::vector<std::pair<int,int>>* answer, std::string& text) {
     std::cout << '\n';
     std::cout << "SUFFIX AUTO:\n";
     suffAuto->printVertex("");
     std::cout << "ANSWER:\n";
+    std::cout << "maximum edge = " << suffAuto->countVert() << '\n';
+    for (auto i: (*answer)) {
+        for (int j = i.first-1; j < i.first-1 + (*arr)[i.second-1]; j++) {
+            text[j] = '$';
+        }
+    }
+    std::cout << "cut string: ";
+    for (auto i: text) 
+        if (i != '$')
+            std::cout << i;
+    std::cout << "\n";
     for (auto j:(*answer))
         std::cout << j.first << ' ' << j.second << '\n';
 }
 
 int main() {
-    auto* answer = new std::set<std::pair<int,int>>;
+    auto* answer = new std::vector<std::pair<int,int>>;
     auto* arr = new std::vector<int>;
     auto* suffAuto = new Vertex(answer, arr);
     std::string text;
-    int k;
-    int maxSampleLen = read(text, suffAuto, arr, k);
 
-    getAnswer(text, suffAuto, answer, k, maxSampleLen);
+    read(text, suffAuto, arr);
+
+    getAnswer(text, suffAuto, answer);
 
     writeAnswer(suffAuto, arr, answer, text);
 }
